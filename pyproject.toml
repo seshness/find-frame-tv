@@ -7,3 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "requests>=2.32.3",
 ]
+
+[project.scripts]
+find-frame-tv = "find_frame_tv:main"

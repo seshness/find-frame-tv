@@ -1,3 +1,4 @@
+import argparse
 import socket
 import re
 import requests
@@ -17,7 +18,7 @@ class TVInfo:
     serial_number: str
 
 
-def find_upnp_devices(timeout: int = 3) -> set[str]:
+def find_upnp_devices(timeout: int) -> set[str]:
     # Finds all UPnP devices and returns their location strings.
     # Increase the timeout value if you're not seeing a device you expect.
     locations = set()
@@ -74,7 +75,7 @@ def parse_xml(xml_data: str, device_ip: str) -> TVInfo | None:
         return None
 
 
-def find_tvs(locations: set[str]) -> list[TVInfo]:
+def _fetch_tv_infos(locations: set[str]) -> list[TVInfo]:
     tvs: list[TVInfo] = []
     locations_with_dmr = [l for l in locations if "/dmr" in l]
     for l in locations_with_dmr:
@@ -90,11 +91,35 @@ def find_tvs(locations: set[str]) -> list[TVInfo]:
     return tvs
 
 
+def find_tvs(timeout: int = 3) -> list[TVInfo]:
+    """
+    Finds Samsung Frame TVs using UPnP service discovery.
+    """
+    locations = find_upnp_devices(timeout=timeout)
+    tvs = _fetch_tv_infos(locations=locations)
+    return tvs
+
+
 def main():
-    locations = find_upnp_devices()
-    tvs = find_tvs(locations=locations)
+    parser = argparse.ArgumentParser(
+        prog="find_frame_tv",
+        description="Reports the IP addresses of Samsung Frame TVs.",
+        epilog="Finds devices on the local network. If a device isn't found, check that you're on the same network and that the device is powered on.",
+    )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        default=3,
+        help="Seconds to wait for Simple Service Discovery Protocol responses",
+    )
+
+    args = parser.parse_args()
+    tvs = find_tvs(args.timeout)
     for tv in tvs:
-        print(tv)
+        print(
+            f"{tv.friendly_name}: {tv.ip} (manufacturer: {tv.manufacturer}, serial: {tv.serial_number})"
+        )
 
 
 if __name__ == "__main__":
